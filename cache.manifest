@@ -1,0 +1,17 @@
+CACHE MANIFEST
+# Version: 0.0.1
+# Build: 20151016080503
+
+CACHE:
+src/app.js
+resources/css/styles.css
+resources/images/bg-icon.png
+resources/images/bt_Appbutton.png
+resources/images/bt_google.png
+resources/images/btn_fb_login.png
+resources/images/deja_icon_ios_228.png
+resources/images/ic_s_close_nor_2x.png
+resources/images/sprites.png
+
+NETWORK:
+*

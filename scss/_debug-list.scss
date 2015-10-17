@@ -1,0 +1,22 @@
+@charset "UTF-8";
+.tabs-content-default {
+  display: none;
+  &.show {
+    display: block;
+    @include animated-1s;
+  }
+  &.animated {
+    -webkit-animation-name: fadeInUp;
+  }
+}
+.user-item-default {
+  @include box-v;
+  width: 100%;
+  font-size: 38px;
+  > .item {
+    @include box-h;
+    width: 100%;
+    padding: 30px;
+    text-align: center;
+  }
+}

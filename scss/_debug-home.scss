@@ -1,0 +1,19 @@
+@charset "UTF-8";
+.view-home {
+  width: 100%;
+  min-height: 100%;
+  background-color: #fff;
+  font-size: 38px;
+  .user-list{
+    .user{
+      @include box-h-c-c;
+      padding-top: 12px;
+      >div {
+        padding-left: 32px;
+      }
+    }
+
+  }
+
+}
+

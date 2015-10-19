@@ -66,14 +66,16 @@ define(function (require, exports, module) {
     function render(data) {
       initResources();
       data = data || VIEW.models.User.userList.get();
-      console.log(data);
 
       var list = [];
       //var d = {name: 1,age: 2,tel: 3,company: 4};
       data = data.data;
       data = data.schemata;
+      console.log(Tpl);
       data.forEach(function(key, idx){
         var d = {};
+
+
         key.child.forEach(function(key){
           d[key.name] = key.title;//name:name    title:value
         });

@@ -8,6 +8,7 @@ define(function (require, exports, module) {
   ///*official
   var Actions = {
     user: Core.localHost + '/user/list.php',
+    movieList:'',
 
     login: Core.localHost + '/account/login_third?success={SURL}&fail={FURL}&pf={PF}',
     main: thisPath + 'index.html',
@@ -23,7 +24,8 @@ define(function (require, exports, module) {
   ///_DEBUG_*Todo: debug actions
   var Actions = {
     user: 'http://ddms.mozat.com/apis/v1/form/',
-
+    //movieList: 'http://ddms.mozat.com/apis/v1/form/',
+    movieList: 'data/movies.json',
     login: Core.localHost + '/account/login_third?success={SURL}&fail={FURL}&pf={PF}',
     main: thisPath + 'index.html',
     analytics: thisPath + 'analytics.html',

@@ -5974,6 +5974,7 @@ define('app/resources/Actions',['require','exports','module'],function (require,
   ///*official
   var Actions = {
     user: Core.localHost + '/user/list.php',
+    movieList:'',
 
     login: Core.localHost + '/account/login_third?success={SURL}&fail={FURL}&pf={PF}',
     main: thisPath + 'index.html',
@@ -5989,7 +5990,8 @@ define('app/resources/Actions',['require','exports','module'],function (require,
   ///_DEBUG_*Todo: debug actions
   var Actions = {
     user: 'http://ddms.mozat.com/apis/v1/form/',
-
+    //movieList: 'http://ddms.mozat.com/apis/v1/form/',
+    movieList: 'data/movies.json',
     login: Core.localHost + '/account/login_third?success={SURL}&fail={FURL}&pf={PF}',
     main: thisPath + 'index.html',
     analytics: thisPath + 'analytics.html',
@@ -6068,21 +6070,21 @@ define('util/ThirdVendor',['require','exports','module'],function (require, expo
 });
 
 define('app/model/RequestHelper',['require','exports','module'],function (require, exports, module) {
-  var getJSON = Core.RequestHandler.getJSON,
+  var getJSON = Core.RequestHandler.getJSON,//define vars (definition has its value,generally using "=", while declaration only explain the exist of params)
     postJSON = Core.RequestHandler.postJSON,
     JSONP = Core.RequestHandler.JSONP;
 
-  function request(action,data,callback,scope) {
+  function request(action,data,callback,scope) { //this scope represent for "this,new Mdl, in UserModel.js
     var __STORE_ID;
     if(data){
       __STORE_ID = data.__STORE_ID;
       delete data.__STORE_ID;
     }
-    getJSON({
-      action: action,
-      data: data,
-      complete: function (data) {
-        if (data.success) {
+    getJSON({ //ajax
+      action: action,  //url
+      data: data,   //get, this is param, send to server
+      complete: function (data) {  //returned data
+        if (data.success) { //jquery object format, return object {Key1:value1, key2:value2}(JSON format)
           scope && scope.set && scope.set(data.data,__STORE_ID);
         }
         callback && callback(data.success);
@@ -7097,7 +7099,7 @@ define('app/model/UserModel',['require','exports','module','app/model/RequestHel
   }
 
   User.prototype.user = new Mdl({
-    request: function (data,callback) {
+    request: function (data,callback) { //callback method basically is ajax tech.
       RequestHelper.request(Actions.user,data,callback,this);
     }
   });
@@ -7109,10 +7111,11 @@ define('app/model/UserModel',['require','exports','module','app/model/RequestHel
       });
     }
   });
+
+
   window.afterRequestUserList = function(data){
     USER.userList.set(data);
   }
-
   USER = new User;
 
   return USER;
@@ -7186,14 +7189,16 @@ define('app/view/HomeView',['require','exports','module','app/view/View','app/mo
     function render(data) {
       initResources();
       data = data || VIEW.models.User.userList.get();
-      console.log(data);
 
       var list = [];
       //var d = {name: 1,age: 2,tel: 3,company: 4};
       data = data.data;
       data = data.schemata;
+      console.log(Tpl);
       data.forEach(function(key, idx){
         var d = {};
+
+
         key.child.forEach(function(key){
           d[key.name] = key.title;//name:name    title:value
         });
@@ -7439,13 +7444,200 @@ define('app/Controller/UserController',['require','exports','module','../resourc
   return new UserController;
 });
 
-define('app/App.js',['require','exports','module','lib/zepto','lib/Core','./Controller/Controller','./Controller/HomeController','./Controller/UserController'],function (require, exports, module) {
+define('app/model/MovieModel',['require','exports','module','app/model/RequestHelper','app/resources/Actions','app/model/Model'],function (require, exports, module) {
+  var RequestHelper = require('app/model/RequestHelper');
+  var Actions = require('app/resources/Actions');
+  var Basic = require('app/model/Model');
+
+  var Movie,
+    Mdl = Core.Class.Model,
+    lcStorage = Core.localStorage;
+
+  function Movie() {
+  }
+
+  Movie.prototype.movieList = new Mdl({
+    request: function(data,callback){
+      RequestHelper.request(Actions.movieList,data,callback,this);
+    }
+  });
+  //Movie.prototype.movieList = new Mdl({ //create movieList
+  //  request: function (data){
+  //    RequestHelper.JSONP({
+  //      action: Actions.movieList+'?id='+data.id+'&callback=afterRequestMovieList'
+  //    });
+  //  }
+  //});
+
+  window.afterRequestMovieList = function(data){  //invoke(call) mycallback method
+    Movie.movieList.set(data);
+  }
+  Movie = new Movie;
+
+  return Movie;
+});
+
+define('app/view/MovieListView',['require','exports','module','app/view/View','app/model/Model','app/model/MovieModel'],function (require, exports, module) {
+  var BasicView = require('app/view/View');
+  var BasicModel = require('app/model/Model');
+  var MovieModel = require('app/model/MovieModel');
+
+  function MovieListView(){
+    this.models = {
+      Basic: BasicModel,
+      Movie: MovieModel
+    }
+    this.viewCls = 'view-movielist';
+    this._BasicView = BasicView;
+
+    var VIEW = this,
+      isApp = Core.NativeBridge.isApp(),
+      Tpl, els,
+      tap = VIEW._BasicView.tapEvent;
+
+    //model listeners
+    VIEW.models.Movie.movieList.updated(render);  //add updated method
+
+    function initEls() {
+      if(els){return;}
+      var main = VIEW._BasicView.getView(VIEW.viewCls);
+      els = {
+        main: main,
+        movieList: main.find('.movie-list')  //find class .movie-list
+      }
+      bindEvent();
+    }//end initEls
+    function initTpls(){
+      if(Tpl){return;}
+      Tpl = Tpl || VIEW._BasicView.getTemplates(VIEW.viewCls);
+    }
+    function initResources() {
+      initEls();
+      initTpls();
+    }
+    this.getEls = function () {
+      initEls();
+      return els;
+    }
+    this.getTpls = function(){
+      initTpls();
+      return Tpl;
+    }
+    function bindEvent() {
+      els.movieList.on(tap, '.item>header', function(){
+        Core.Event.trigger('toggleTextSectionExpand',this.parentNode);
+      });
+
+
+    }//end bindEvent
+
+    this.show = function () {
+      initResources();
+
+      Core.Event.trigger('trigerAnimate',els.main);
+      VIEW._BasicView.show(VIEW.viewCls);
+    }
+    this.hide = function () {
+      if (!els) {
+        return;
+      }
+    }
+    function render(data) {
+      initResources();
+      data = data || VIEW.models.Movie.movieList.get();   // 1. data =  2. get() method.
+      var list = [];
+      //data = data.data.schemata;
+      data.data.schemata.forEach(function(val){
+        var d = {};
+        d['title'] = val.name;
+        d['desc'] = val.title;
+        val.child.forEach(function(val){
+          d[val.name] = val.title;    //name:name    title:value
+        });
+        list.push(Tpl.movieList(d));
+        //console.log(d);
+      });
+      els.movieList.html( list.join('') );
+
+
+    }//end render
+
+  }//end View
+  return new MovieListView();
+});
+
+define('app/Controller/MovieListController',['require','exports','module','../resources/Actions','app/model/Model','app/model/MovieModel','app/view/View','app/view/MovieListView'],function (require, exports, module) {
+  var Actions = require('../resources/Actions');
+  var BasicModel = require('app/model/Model');
+  var MovieModel = require('app/model/MovieModel');
+  var BasicView = require('app/view/View');
+  var MovieListView = require('app/view/MovieListView');
+
+  function MovieListController(){
+    this.models = {
+      Basic: BasicModel,
+      Movie: MovieModel
+    }
+    this.views = {
+      Basic: BasicView,
+      MovieList: MovieListView
+    }
+
+    var CTRL = this,
+      viewNames,
+      curViewId = '',
+      viewMovieListQuery = {};
+
+    viewNames = {
+      'movielist': 'MovieList'
+    }
+    Core.Router.subscribe('/movielist/', onViewMovieList, unViewMovieList);
+
+    //统计视图
+    Core.Event.on('analyticsCurView', analyticsCurView);
+    //forwardMovieList
+    Core.Event.on('forwardMovieList', forwardMovieList);
+
+
+    function unViewMovieList() {
+      CTRL.views.MovieList.hide();
+    }
+
+    function onViewMovieList(req){
+      curViewId = 'movielist';
+      viewMovieListQuery = req.query;
+      CTRL.views.MovieList.show();
+      CTRL.models.Movie.movieList.request({id:'5622309ccee3c65f0fbdfd45'});
+
+      //追加统计
+      analyticsCurView();
+    }
+
+    function forwardMovieList(arg){
+      Core.Router.forward('/movielist/' + (arg || ''));
+    }
+
+    function analyticsCurView(params, title) {
+      if (!Core.Router.currentMatch(['/movielist/'])) {
+        return;
+      }
+      params = params ? ('&' + params) : '';
+      title = title || viewNames[curViewId] || document.title;
+
+      Core.Event.trigger('analytics', 'viewid=' + curViewId + params, title);
+    }
+  }
+  return new MovieListController;
+});
+
+define('app/App.js',['require','exports','module','lib/zepto','lib/Core','./Controller/Controller','./Controller/HomeController','./Controller/UserController','./Controller/MovieListController'],function (require, exports, module) {
   require('lib/zepto');
   require('lib/Core');
 
   var BasicController = require('./Controller/Controller');
   var HomeController = require('./Controller/HomeController');
   var UserController = require('./Controller/UserController');
+  var MovieListController = require('./Controller/MovieListController');
   //__INSERT_POINT__ Don't delete!!
 
   function App() {

@@ -1,19 +1,19 @@
 define(function (require, exports, module) {
-  var getJSON = Core.RequestHandler.getJSON,
+  var getJSON = Core.RequestHandler.getJSON,//define vars (definition has its value,generally using "=", while declaration only explain the exist of params)
     postJSON = Core.RequestHandler.postJSON,
     JSONP = Core.RequestHandler.JSONP;
 
-  function request(action,data,callback,scope) {
+  function request(action,data,callback,scope) { //this scope represent for "this,new Mdl, in UserModel.js
     var __STORE_ID;
     if(data){
       __STORE_ID = data.__STORE_ID;
       delete data.__STORE_ID;
     }
-    getJSON({
-      action: action,
-      data: data,
-      complete: function (data) {
-        if (data.success) {
+    getJSON({ //ajax
+      action: action,  //url
+      data: data,   //get, this is param, send to server
+      complete: function (data) {  //returned data
+        if (data.success) { //jquery object format, return object {Key1:value1, key2:value2}(JSON format)
           scope && scope.set && scope.set(data.data,__STORE_ID);
         }
         callback && callback(data.success);

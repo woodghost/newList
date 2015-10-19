@@ -1,5 +1,22 @@
 <section class="view view-movielist">
-  <section class="main">
-    Hello MovieList
+  <section class="movie-list">
+    <script type="text/html" data-template="movieList">
+      <article class="item">
+        <header>
+          <div class="title"><%=title%></div>
+          <div class="expand">More Info<i class="icon icon-icon_seeall_2x"></i></div>
+        </header>
+        <div class="bd">
+          <div class="desc"><%=desc%></div>
+        </div>
+        <div class="image">
+          <img  micro-src="<%=image%>">
+        </div>
+        <article class="other">
+          <div class="year"><%=year%></div>
+          <div class="director"><%=director%></div>
+        </article>
+      </article>
+    </script>
   </section>
 </section>

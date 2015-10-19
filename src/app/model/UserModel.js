@@ -12,7 +12,7 @@ define(function (require, exports, module) {
   }
 
   User.prototype.user = new Mdl({
-    request: function (data,callback) {
+    request: function (data,callback) { //callback method basically is ajax tech.
       RequestHelper.request(Actions.user,data,callback,this);
     }
   });
@@ -24,10 +24,11 @@ define(function (require, exports, module) {
       });
     }
   });
+
+
   window.afterRequestUserList = function(data){
     USER.userList.set(data);
   }
-
   USER = new User;
 
   return USER;

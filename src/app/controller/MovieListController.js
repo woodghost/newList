@@ -1,12 +1,14 @@
 define(function (require, exports, module) {
   var Actions = require('../resources/Actions');
   var BasicModel = require('app/model/Model');
+  var MovieModel = require('app/model/MovieModel');
   var BasicView = require('app/view/View');
   var MovieListView = require('app/view/MovieListView');
 
   function MovieListController(){
     this.models = {
-      Basic: BasicModel
+      Basic: BasicModel,
+      Movie: MovieModel
     }
     this.views = {
       Basic: BasicView,
@@ -37,10 +39,12 @@ define(function (require, exports, module) {
       curViewId = 'movielist';
       viewMovieListQuery = req.query;
       CTRL.views.MovieList.show();
+      CTRL.models.Movie.movieList.request({id:'5622309ccee3c65f0fbdfd45'});
 
       //追加统计
       analyticsCurView();
     }
+
     function forwardMovieList(arg){
       Core.Router.forward('/movielist/' + (arg || ''));
     }

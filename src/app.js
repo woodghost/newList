@@ -7458,12 +7458,12 @@ define('app/model/MovieModel',['require','exports','module','app/model/RequestHe
 
   Movie.prototype.movieList = new Mdl({
     request: function(data,callback){
-      RequestHelper.request(Actions.movieList,data,callback,this);
+      RequestHelper.request(Actions.movieList,data,callback,this);//从.json file里面拿数据
     }
   });
   //Movie.prototype.movieList = new Mdl({ //create movieList
   //  request: function (data){
-  //    RequestHelper.JSONP({
+  //    RequestHelper.JSONP({                    //JSONP  request data 这是JSONP 拿数据的写法
   //      action: Actions.movieList+'?id='+data.id+'&callback=afterRequestMovieList'
   //    });
   //  }
@@ -7472,6 +7472,7 @@ define('app/model/MovieModel',['require','exports','module','app/model/RequestHe
   window.afterRequestMovieList = function(data){  //invoke(call) mycallback method
     Movie.movieList.set(data);
   }
+
   Movie = new Movie;
 
   return Movie;
@@ -7546,11 +7547,13 @@ define('app/view/MovieListView',['require','exports','module','app/view/View','a
       initResources();
       data = data || VIEW.models.Movie.movieList.get();   // 1. data =  2. get() method.
       var list = [];
-      //data = data.data.schemata;
       data.data.schemata.forEach(function(val){
         var d = {};
+        console.log(val);
         d['title'] = val.name;
         d['desc'] = val.title;
+        //console.log(d['title']);
+        //console.log(d['desc']);
         val.child.forEach(function(val){
           d[val.name] = val.title;    //name:name    title:value
         });
@@ -7558,6 +7561,8 @@ define('app/view/MovieListView',['require','exports','module','app/view/View','a
         //console.log(d);
       });
       els.movieList.html( list.join('') );
+      //console.log(list);
+
 
 
     }//end render
@@ -7607,10 +7612,15 @@ define('app/Controller/MovieListController',['require','exports','module','../re
       curViewId = 'movielist';
       viewMovieListQuery = req.query;
       CTRL.views.MovieList.show();
-      CTRL.models.Movie.movieList.request({id:'5622309ccee3c65f0fbdfd45'});
+      //CTRL.models.Movie.movieList.request({id:'5622309ccee3c65f0fbdfd45'});// get this ID from DDMS
+      CTRL.models.Movie.movieList.request(null,afterRequestMovieList());
+
 
       //追加统计
       analyticsCurView();
+    }
+    function afterRequestMovieList(success){
+
     }
 
     function forwardMovieList(arg){

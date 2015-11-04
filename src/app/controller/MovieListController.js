@@ -39,10 +39,15 @@ define(function (require, exports, module) {
       curViewId = 'movielist';
       viewMovieListQuery = req.query;
       CTRL.views.MovieList.show();
-      CTRL.models.Movie.movieList.request({id:'5622309ccee3c65f0fbdfd45'});
+      //CTRL.models.Movie.movieList.request({id:'5622309ccee3c65f0fbdfd45'});// get this ID from DDMS
+      CTRL.models.Movie.movieList.request(null,afterRequestMovieList());
+
 
       //追加统计
       analyticsCurView();
+    }
+    function afterRequestMovieList(success){
+
     }
 
     function forwardMovieList(arg){

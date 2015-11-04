@@ -67,11 +67,13 @@ define(function (require, exports, module) {
       initResources();
       data = data || VIEW.models.Movie.movieList.get();   // 1. data =  2. get() method.
       var list = [];
-      //data = data.data.schemata;
       data.data.schemata.forEach(function(val){
         var d = {};
+        console.log(val);
         d['title'] = val.name;
         d['desc'] = val.title;
+        //console.log(d['title']);
+        //console.log(d['desc']);
         val.child.forEach(function(val){
           d[val.name] = val.title;    //name:name    title:value
         });
@@ -79,6 +81,8 @@ define(function (require, exports, module) {
         //console.log(d);
       });
       els.movieList.html( list.join('') );
+      //console.log(list);
+
 
 
     }//end render

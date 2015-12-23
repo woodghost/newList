@@ -1,28 +1,33 @@
 define(function (require, exports, module) {
-  var getJSON = Core.RequestHandler.getJSON,//define vars (definition has its value,generally using "=", while declaration only explain the exist of params)
+  var getJSON = Core.RequestHandler.getJSON,
     postJSON = Core.RequestHandler.postJSON,
     JSONP = Core.RequestHandler.JSONP;
 
-  function request(action,data,callback,scope) { //this scope represent for "this,new Mdl, in UserModel.js
-    var __STORE_ID;
-    if(data){
-      __STORE_ID = data.__STORE_ID;
-      delete data.__STORE_ID;
-    }
-    getJSON({ //ajax
-      action: action,  //url
-      data: data,   //get, this is param, send to server
-      complete: function (data) {  //returned data
-        if (data.success) { //jquery object format, return object {Key1:value1, key2:value2}(JSON format)
+  function request(action,data,callback,scope,options) {
+    options = options || {};
+    var __STORE_ID,conf;
+    data = data || {};
+    data._t = new Date().getTime();
+    __STORE_ID = data.__STORE_ID;
+    delete data.__STORE_ID;
+    conf = {
+      action: action,
+      data: data,
+      complete: function (data) {
+        if (data.success) {
           scope && scope.set && scope.set(data.data,__STORE_ID);
         }
         callback && callback(data.success);
       }
-    });
+    };
+    for(var name in options) conf[name]=options[name];
+    conf.action = action;
+    conf.data = data;
+    getJSON(conf);
   }
   function post(action,data,callback,scope,options) {
     options = options || {};
-    postJSON({
+    var conf = {
       action: action,
       data: data,
       contentType: options.contentType||"application/json;charset=utf-8",
@@ -32,7 +37,11 @@ define(function (require, exports, module) {
         }
         callback && callback(data.success);
       }
-    });
+    };
+    for(var name in options) conf[name]=options[name];
+    conf.action = action;
+    conf.data = data;
+    postJSON(conf);
   }
 
   return {

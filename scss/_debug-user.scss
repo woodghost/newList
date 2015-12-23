@@ -1,14 +1,94 @@
 @charset "UTF-8";
 .view-user {
   width: 100%;
+  height: 100%;
   background-color: #fff;
-  color: #292929;
-  .main {
-    @include box-v-c-c;
-    padding: 50px 30px;
-    .list {
-      padding: 50px;
+  font-size: 32px;
+  > .profile {
+    >.user{
+      @include box-h;
+      padding: 30px 40px;
+      background-color: rgba(168,216,185,0.5);
+
+      >.avatar{
+        position: relative;
+        @include box-h-c-c;
+        width: 190px;
+        height: 190px;
+        img{
+          height: 100%;
+          width: 100%;
+          -webkit-border-radius: 100%;
+        }
+        .tag{
+          position: absolute;
+          right: 0;
+          bottom: 0;
+        }
+      }
+      >.meta{
+        @include box-v;
+        padding: 15px 30px;
+        -webkit-box-flex: 1;
+        .name{
+          font-size: 38px;
+        }
+        .follower{
+          display: inline-block;
+          padding-right: 10px;
+          font-size: 34px;
+          color: #000;
+          line-height: 32px;
+        }
+        .following{
+          display: inline-block;
+          font-size: 34px;
+          color: #000;
+          line-height: 32px;
+        }
+        .follow{
+          padding-top: 26px;
+          i{
+            @include animated-1s;
+            -webkit-animation-duration: 600ms;
+            -webkit-animation-name: MicroPopUp;
+          }
+        }
+      }
     }
+  }
+  .liked-style {
+    .list{
+      padding: 40px 0 0 40px;
+      .item{
+        @include box-h-c-c;
+        float: left;
+        height: 315px;
+        width: 315px;
+        margin: 0 40px 40px 0;
+        img{
+          display: inherit;
+        }
+      }
+    }
+  }
+  .my-style {
+    .list{
+      padding: 40px 0 0 40px;
+      .item{
+        @include box-h-c-c;
+        float: left;
+        height: 315px;
+        width: 315px;
+        margin: 0 40px 40px 0;
+        img{
+          display: inherit;
+        }
+      }
+    }
+  }
+  .liked-item{
+    padding: 20px;
   }
 }
 

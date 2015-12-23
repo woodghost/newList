@@ -35,7 +35,7 @@ define(function (require, exports, module) {
       UN_SUB_NAME = '__UN_SUBSCRIBED_ACTION',
       INIT_HASH_STR = formatHash(HashHandler.get()),
       currentHash,
-      currentHashStr = INIT_HASH_STR,
+      currentHashStr = INIT_HASH_STR || UN_SUB_NAME,
       currentQureyStr = '',
       lastActionKey,
       leavePrefix = '__',
@@ -46,6 +46,7 @@ define(function (require, exports, module) {
       readyCallbacks = [],
       changedCallbacks = [],
       historyPositions = {},
+      historyTitles = {},
       anchorEl;
 
     //iOS使用pushstate,解决iOS7没有历史的问题
@@ -87,8 +88,9 @@ define(function (require, exports, module) {
         oldHash: formatHash(HashHandler.getByURL(args.oldURL))
       }
       setHistoryPosition();
+      setHistoryTitle();
       currentHash = hash;
-      currentHashStr = hash.curHash;
+      currentHashStr = hash.curHash || UN_SUB_NAME;
       setLastAction(hash.curHash);
       initCallback && initCallback(hash.curHash, hash);
       if (isReady) {
@@ -111,6 +113,8 @@ define(function (require, exports, module) {
                 currentQureyStr = $2;
                 published = true;
                 lastActionKey = key;
+                restoreHistoryTitle();
+
                 Pubsub.publish(key, {
                   action: key,
                   param: $2,
@@ -123,13 +127,16 @@ define(function (require, exports, module) {
         }
       }
       if (!published) {
+        lastActionKey = UN_SUB_NAME;
+        currentQureyStr = hash.curHash;
+        restoreHistoryTitle();
+
         Pubsub.publish(UN_SUB_NAME, {
           action: hash.curHash,
           param: hash.curHash,
           hash: hash,
           query: getQuery(hash.curHash)
         });
-        currentQureyStr = hash.curHash;
       }
     }
 
@@ -192,8 +199,8 @@ define(function (require, exports, module) {
      * 订阅所有没有被注册的主题
      * @param {Object} observer
      */
-    function onUnsubscribed(observer) {
-      subscribe.call(Pubsub,UN_SUB_NAME, observer);
+    function onUnsubscribed(enterObserver,leaveObserver) {
+      onSubscribe(UN_SUB_NAME,enterObserver,leaveObserver);
       return Pubsub;
     }
     /**
@@ -402,6 +409,25 @@ define(function (require, exports, module) {
       setHistoryPosition(id,0);
     }
 
+    function setHistoryTitle(id,title){
+      id = id || currentHashStr;
+      if(id){
+        historyTitles[id] = title || document.title;
+      }
+    }
+
+    function getHistoryTitle(id){
+      id = id || currentHashStr;
+      return id && historyTitles[id];
+    }
+
+    function restoreHistoryTitle(id){
+      var title = getHistoryTitle(id);
+      if(title){
+        document.title = title;
+      }
+    }
+
     Pubsub.initHash = INIT_HASH_STR;
     Pubsub.init = init;
     Pubsub.run = run;
@@ -417,6 +443,7 @@ define(function (require, exports, module) {
     Pubsub.getQuery = getQuery;
     Pubsub.getHistoryPosition = getHistoryPosition;
     Pubsub.scrollToHistoryPosition = scrollToHistoryPosition;
+    Pubsub.getHistoryTitle = getHistoryTitle;
     Pubsub.getUnsubscribedAction = function () {
       return UN_SUB_NAME;
     };

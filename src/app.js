@@ -2680,15 +2680,15 @@ define('util/Unveil',['require','exports','module'],function (require, exports, 
         var source = this.getAttribute(attrib);
         source = source || this.getAttribute("data-src");
         if (source) {
-          this.setAttribute("src", source);
           if (typeof callback === "function") callback.call(this);
+          this.setAttribute("src", source);
         }
       });
 
       function unveil() {
         var inview = images.filter(function () {
           var $e = $(this);
-          if ($e.is(":hidden")) return;
+          //if ($e.is(":hidden")) return;
 
           var wt = $w.scrollTop(),
             wb = wt + $w.height(),
@@ -4884,7 +4884,7 @@ define('core/Router',['require','exports','module','./Pubsub','./Subject','./Has
       UN_SUB_NAME = '__UN_SUBSCRIBED_ACTION',
       INIT_HASH_STR = formatHash(HashHandler.get()),
       currentHash,
-      currentHashStr = INIT_HASH_STR,
+      currentHashStr = INIT_HASH_STR || UN_SUB_NAME,
       currentQureyStr = '',
       lastActionKey,
       leavePrefix = '__',
@@ -4895,6 +4895,7 @@ define('core/Router',['require','exports','module','./Pubsub','./Subject','./Has
       readyCallbacks = [],
       changedCallbacks = [],
       historyPositions = {},
+      historyTitles = {},
       anchorEl;
 
     //iOS使用pushstate,解决iOS7没有历史的问题
@@ -4936,8 +4937,9 @@ define('core/Router',['require','exports','module','./Pubsub','./Subject','./Has
         oldHash: formatHash(HashHandler.getByURL(args.oldURL))
       }
       setHistoryPosition();
+      setHistoryTitle();
       currentHash = hash;
-      currentHashStr = hash.curHash;
+      currentHashStr = hash.curHash || UN_SUB_NAME;
       setLastAction(hash.curHash);
       initCallback && initCallback(hash.curHash, hash);
       if (isReady) {
@@ -4960,6 +4962,8 @@ define('core/Router',['require','exports','module','./Pubsub','./Subject','./Has
                 currentQureyStr = $2;
                 published = true;
                 lastActionKey = key;
+                restoreHistoryTitle();
+
                 Pubsub.publish(key, {
                   action: key,
                   param: $2,
@@ -4972,13 +4976,16 @@ define('core/Router',['require','exports','module','./Pubsub','./Subject','./Has
         }
       }
       if (!published) {
+        lastActionKey = UN_SUB_NAME;
+        currentQureyStr = hash.curHash;
+        restoreHistoryTitle();
+
         Pubsub.publish(UN_SUB_NAME, {
           action: hash.curHash,
           param: hash.curHash,
           hash: hash,
           query: getQuery(hash.curHash)
         });
-        currentQureyStr = hash.curHash;
       }
     }
 
@@ -5041,8 +5048,8 @@ define('core/Router',['require','exports','module','./Pubsub','./Subject','./Has
      * 订阅所有没有被注册的主题
      * @param {Object} observer
      */
-    function onUnsubscribed(observer) {
-      subscribe.call(Pubsub,UN_SUB_NAME, observer);
+    function onUnsubscribed(enterObserver,leaveObserver) {
+      onSubscribe(UN_SUB_NAME,enterObserver,leaveObserver);
       return Pubsub;
     }
     /**
@@ -5251,6 +5258,25 @@ define('core/Router',['require','exports','module','./Pubsub','./Subject','./Has
       setHistoryPosition(id,0);
     }
 
+    function setHistoryTitle(id,title){
+      id = id || currentHashStr;
+      if(id){
+        historyTitles[id] = title || document.title;
+      }
+    }
+
+    function getHistoryTitle(id){
+      id = id || currentHashStr;
+      return id && historyTitles[id];
+    }
+
+    function restoreHistoryTitle(id){
+      var title = getHistoryTitle(id);
+      if(title){
+        document.title = title;
+      }
+    }
+
     Pubsub.initHash = INIT_HASH_STR;
     Pubsub.init = init;
     Pubsub.run = run;
@@ -5266,6 +5292,7 @@ define('core/Router',['require','exports','module','./Pubsub','./Subject','./Has
     Pubsub.getQuery = getQuery;
     Pubsub.getHistoryPosition = getHistoryPosition;
     Pubsub.scrollToHistoryPosition = scrollToHistoryPosition;
+    Pubsub.getHistoryTitle = getHistoryTitle;
     Pubsub.getUnsubscribedAction = function () {
       return UN_SUB_NAME;
     };
@@ -5613,29 +5640,28 @@ define('util/RequestHandler',['require','exports','module'],function (require, e
       if (!option) {
         return;
       }
-      $.ajax({
-        headers: {"cache-control": "no-cache"},
-        type: option.type,
-        url: option.action,
-        dataType: option.dataType,
-        contentType: option.contentType,
-        data: option.data || null,//空值设置null避免向后端发送undefined无用参数
-        success: function (data, status, xhr) {
-          if (option.complete && typeof option.complete === 'function') {
-            option.complete({
-              data: data,
-              success: true
-            });
-          }
-        },
-        error: function (xhr, errorType, error) {
-          if (option.complete && typeof option.complete === 'function') {
-            option.complete({
-              success: false
-            });
-          }
+      var conf = {};
+      for(var name in option) conf[name]=option[name];
+      conf.url = conf.action || conf.url;
+      conf.data = conf.data || null;
+      delete conf.complete;
+      delete conf.action;
+      conf.success = function (data, status, xhr) {
+        if (option.complete && typeof option.complete === 'function') {
+          option.complete({
+            data: data,
+            success: true
+          });
         }
-      });
+      };
+      conf.error = function (xhr, errorType, error) {
+        if (option.complete && typeof option.complete === 'function') {
+          option.complete({
+            success: false
+          });
+        }
+      };
+      $.ajax(conf);
     }//end AJAXHandler
     function JSONP(option) {
       if (!option) {
@@ -5643,7 +5669,7 @@ define('util/RequestHandler',['require','exports','module'],function (require, e
       }
       $.ajax({
         type: 'GET',
-        url: option.action,
+        url: option.action||option.url,
         dataType: 'jsonp',
         jsonp: false,
         jsonpCallback: false,
@@ -5722,6 +5748,62 @@ define('util/versionCompare',['require','exports','module'],function (require, e
   }
 
   return versionCompare;
+});
+
+define('util/FormHandler',['require','exports','module','core/Navigator'],function(require, exports, module) {
+
+  var Navigator = require('core/Navigator');
+
+  var FormHandler = function(){
+    //MONOSTATE
+    if(FormHandler.prototype.instance){
+      return FormHandler.prototype.instance;
+    }
+    var _this = this;
+
+    function getForm(method){
+      var _form = document.createElement('form');
+      _form.setAttribute("style", "display:none;width:0;height:0;position: absolute;top:0;left:0;border:0;");
+      _form.setAttribute("method",method || 'POST');
+      return _form;
+    }
+
+    this.asyncSubmit = function(action,data){
+      this.submit(action,data,true);
+    }
+
+    this.submit = function(action,data,async){
+      var target,
+        frame,
+        form = getForm(),
+        inputs = [],
+        itpl = '<input type="text" name="{N}" value="{V}" />';
+
+      if(async){
+        target = '__formhandler_'+new Date().getTime();
+        frame = Navigator.getFrame(null,target);
+        form.setAttribute('target', target);
+        setTimeout(function(){
+          Navigator.removeFrame(frame);
+        },120000);
+      }
+
+      form.setAttribute('action', action);
+      data = data || {};
+      for(var key in data){
+        inputs.push( itpl.replace('{N}',key).replace('{V}',data[key]) );
+      }
+      form.innerHTML = inputs.join('');
+      action && setTimeout(function(){
+        form.submit();
+      },100);
+    }
+
+    //MONOSTATE
+    FormHandler.prototype.instance = this;
+  };
+
+  return new FormHandler;
 });
 
 define('util/RandomList',['require','exports','module'],function (require, exports, module) {
@@ -5908,7 +5990,7 @@ define('util/DateHandler',['require','exports','module'],function (require, expo
   return DateHandler;
 });
 
-define('lib/Core',['require','exports','module','util/RequestAnimationFrame','util/Easing','util/Unveil','util/VirtualDOMLite','core/Navigator','core/Subject','core/MicroTmpl','core/Class','core/NativeBridge','core/Router','core/HashHandler','core/Event','util/LocalStorage','util/LocalHost','util/LocalParam','util/MetaHandler','util/RequestHandler','util/versionCompare','util/RandomList','util/Number','util/DateHandler'],function (require, exports, module) {
+define('lib/Core',['require','exports','module','util/RequestAnimationFrame','util/Easing','util/Unveil','util/VirtualDOMLite','core/Navigator','core/Subject','core/MicroTmpl','core/Class','core/NativeBridge','core/Router','core/HashHandler','core/Event','util/LocalStorage','util/LocalHost','util/LocalParam','util/MetaHandler','util/RequestHandler','util/versionCompare','util/FormHandler','util/RandomList','util/Number','util/DateHandler'],function (require, exports, module) {
   require('util/RequestAnimationFrame');
   require('util/Easing');
   require('util/Unveil');
@@ -5929,6 +6011,7 @@ define('lib/Core',['require','exports','module','util/RequestAnimationFrame','ut
   var MetaHandler = require('util/MetaHandler');
   var RequestHandler = require('util/RequestHandler');
   var versionCompare = require('util/versionCompare');
+  var FormHandler = require('util/FormHandler');
 
   var randomList = require('util/RandomList');
   var Num = require('util/Number');
@@ -5948,6 +6031,7 @@ define('lib/Core',['require','exports','module','util/RequestAnimationFrame','ut
     RequestHandler: RequestHandler,
     NativeBridge: NativeBridge,
     versionCompare: versionCompare,
+    FormHandler: FormHandler,
     Event: Event,
     Router: Router,
 
@@ -5956,7 +6040,7 @@ define('lib/Core',['require','exports','module','util/RequestAnimationFrame','ut
     DateHandler: DateHandler
   };
 
-  //开启客户端调试,无需客户端环境模拟客户端接口
+  //enable debug model
   if (localParam().search['debug'] == 1) {
     Core.NativeBridge.enableDebug();
   }
@@ -5973,37 +6057,153 @@ define('app/resources/Actions',['require','exports','module'],function (require,
 
   ///*official
   var Actions = {
-    user: Core.localHost + '/user/list.php',
-    movieList:'',
+    login: Core.localHost + '/account/login_third?pf={PF}&success={SURL}&fail={FURL}',
+    profile: Core.localHost + '/account/h5_info?tags=followers,product_likes,creation_likes,user_info',
+    follow: Core.localHost + '/follow/sync',
 
-    login: Core.localHost + '/account/login_third?success={SURL}&fail={FURL}&pf={PF}',
-    main: thisPath + 'index.html',
-    analytics: thisPath + 'analytics.html',
+    homeBanner: Core.localHost +'/config/banner',
+
+    eventlist: Core.localHost + '/event/list/',
+    eventinfo: Core.localHost + '/event/infos/',
+
+    vote: Core.localHost + '/vote/get_random_single?limit=20',
+    doVote: Core.localHost + '/vote/single_vote',
+
+    getBFC: Core.localHost + '/j4u/get_bfc',
+    updateBFC: Core.localHost + '/j4u/update_bfc',
+    faceResult: Core.localHost + '/face/result',
+
+    fashionista: Core.localHost + '/fashionista/get_list',
+    ambassador: Core.localHost + '/fashionista/get_ambassador_detail',
+
+    creation: Core.localHost + '/creation/h5_get_multi',
+    likeCreation: Core.localHost + '/creation/h5_like',
+    delCreation: Core.localHost + '/creation/h5_delete',
+
+    product: Core.localHost + '/products/get_product_display_info',
+    likeProduct: Core.localHost + '/favorite/sync',
+    specialProducts: Core.localHost + '/products/get_special',
+
+    checkout: Core.localHost + '/order/direct_checkout',
+    checkoutFromCart: Core.localHost + '/cart/checkout',
+    updateDeliverInfo: Core.localHost + '/order/update_deliver_info',
+    promotionCode: Core.localHost + '/order/apply_code',
+
+    placeOrder: Core.localHost + '/order/place_order',
+    rePlaceOrder: Core.localHost + '/order/try_again_place_order',
+    orderHistory: Core.localHost + '/order/get_order_history',
+    orderDetail: Core.localHost + '/order/get_order_detail_info',
+    reOrderPlaceOrder: Core.localHost + '/order/reorder_place_order',
+
+    cartInfo: Core.localHost + '/cart/get_cart_info',
+    addToCart: Core.localHost + '/cart/add_item',
+    deleteCartItem: Core.localHost + '/cart/delete_item',
+    updateCartItem: Core.localHost + '/cart/update_item',
+
+    addressBook: Core.localHost + '/order/address/get',
+    addAddress: Core.localHost + '/order/address/add',
+    updateAddress: Core.localHost + '/order/address/update',
+    delAddress: Core.localHost + '/order/address/delete',
+
+    sceneCategory: Core.localHost +'/config/get',
+    sceneDetail: Core.localHost + '/style/get_fp_scenedetail',
+    sceneProducts: Core.localHost + '/style/get_fp_product',
+
+    myStyle: Core.localHost + '',
+    likedItemProducts: Core.localHost + '',
+
+    userProfile: '',
+    userStyle: '',
+
+
+
     dejame: 'http://deja.me/u/XPKab9',
+    main: thisPath,
+    analytics: thisPath + 'analytics.html',
     dejaAppAndroid: 'http://deja.me/u/XPKab9',
     dejaAppIos: 'http://deja.me/u/fzb1KO',
     dejaDwonloadBridge: 'http://m.deja.me/bridge/',
-    dejaShareLogo: thisPath + 'resources/images/deja_icon_ios_228.png'
+    dejaShareLogo: thisPath + 'resources/images/deja_icon_ios_228.png',
+    dejaUserAvatar: thisPath + 'resources/images/pic_avatar_setting_default_2x.png',
+    dejafashionSchema: 'dejafashion://'
   }
   //*/
 
   ///_DEBUG_*Todo: debug actions
   var Actions = {
-    user: 'http://ddms.mozat.com/apis/v1/form/',
-    //movieList: 'http://ddms.mozat.com/apis/v1/form/',
-    movieList: 'data/movies.json',
     login: Core.localHost + '/account/login_third?success={SURL}&fail={FURL}&pf={PF}',
-    main: thisPath + 'index.html',
-    analytics: thisPath + 'analytics.html',
+    profile: 'data/profile.json',
+    follow: 'data/follow.json',
+
+    homeBanner: 'data/homebanner.json',
+
+    eventlist: 'data/eventlist.json',
+    eventinfo: 'data/eventinfo.json',
+
+    vote: 'data/vote.json',
+    doVote: 'data/vote.json',
+
+    getBFC: 'data/getbfc.json',
+    updateBFC: 'data/updatebfc.json',
+    faceResult: 'data/faceresult.json',
+
+    fashionista: 'data/fashionista.json',
+    ambassador: 'data/ambassador.json',
+
+    creation: 'data/creation.json',
+    likeCreation: 'data/likecreation.json',
+    delCreation: 'data/delcreation.json',
+
+    product: 'data/product.json',
+    likeProduct: 'data/likeproduct.json',
+    specialProducts: 'data/specialproduct.json',
+
+    checkout: 'data/checkout.json',
+    checkoutFromCart: 'data/checkoutfromcart.json',
+    updateDeliverInfo: 'data/updatedeliverinfo.json',
+    promotionCode: 'data/promotioncode.json',
+
+    placeOrder: thisPath+'placeorder.html',
+    rePlaceOrder: thisPath+'placeorder.html',
+    orderHistory: 'data/orderhistory.json',
+    orderDetail: 'data/orderdetail.json',
+    reOrderPlaceOrder: 'data/reorderplaceorder.json',
+
+    cartInfo: 'data/cart.json',
+    addToCart: 'data/addtocart.json',
+    deleteCartItem: 'data/deletecartitem.json',
+    updateCartItem: 'data/updatecartitem.json',
+
+    addressBook: 'data/addressbook.json',
+    addAddress: 'data/addaddress.json',
+    updateAddress: 'data/updateaddress.json',
+    delAddress: 'data/deladdress.json',
+
+    sceneCategory: 'data/scenecategory.json',
+    sceneDetail: 'data/scenedetail.json',
+    sceneProducts: 'data/sceneproducts.json',
+
+    myStyle: 'data/mystyle.json',
+    likedItemProducts: 'data/sceneproducts.json',
+
+    userInfo: 'data/user.json',//User info:http://api.dejafashion.com/account/infos?ids=10401&invoker_uid=10070
+    userStyle: 'data/userstyle.json',//User detail:http://api.dejafashion.com/account/detail?id=10401
+
+
     dejame: 'http://deja.me/u/XPKab9',
+    main: thisPath,
+    analytics: thisPath + 'analytics.html',
     dejaAppAndroid: 'http://deja.me/u/XPKab9',
     dejaAppIos: 'http://deja.me/u/fzb1KO',
     dejaDwonloadBridge: 'http://m.deja.me/bridge/',
-    dejaShareLogo: thisPath + 'resources/images/deja_icon_ios_228.png'
+    dejaShareLogo: thisPath + 'resources/images/deja_icon_ios_228.png',
+    dejaUserAvatar: thisPath + 'resources/images/pic_avatar_setting_default_2x.png',
+    dejafashionSchema: 'dejafashion://'
   }
   //*/
   return Actions;
 });
+
 
 define('util/ThirdVendor',['require','exports','module'],function (require, exports, module) {
   /**
@@ -6070,30 +6270,35 @@ define('util/ThirdVendor',['require','exports','module'],function (require, expo
 });
 
 define('app/model/RequestHelper',['require','exports','module'],function (require, exports, module) {
-  var getJSON = Core.RequestHandler.getJSON,//define vars (definition has its value,generally using "=", while declaration only explain the exist of params)
+  var getJSON = Core.RequestHandler.getJSON,
     postJSON = Core.RequestHandler.postJSON,
     JSONP = Core.RequestHandler.JSONP;
 
-  function request(action,data,callback,scope) { //this scope represent for "this,new Mdl, in UserModel.js
-    var __STORE_ID;
-    if(data){
-      __STORE_ID = data.__STORE_ID;
-      delete data.__STORE_ID;
-    }
-    getJSON({ //ajax
-      action: action,  //url
-      data: data,   //get, this is param, send to server
-      complete: function (data) {  //returned data
-        if (data.success) { //jquery object format, return object {Key1:value1, key2:value2}(JSON format)
+  function request(action,data,callback,scope,options) {
+    options = options || {};
+    var __STORE_ID,conf;
+    data = data || {};
+    data._t = new Date().getTime();
+    __STORE_ID = data.__STORE_ID;
+    delete data.__STORE_ID;
+    conf = {
+      action: action,
+      data: data,
+      complete: function (data) {
+        if (data.success) {
           scope && scope.set && scope.set(data.data,__STORE_ID);
         }
         callback && callback(data.success);
       }
-    });
+    };
+    for(var name in options) conf[name]=options[name];
+    conf.action = action;
+    conf.data = data;
+    getJSON(conf);
   }
   function post(action,data,callback,scope,options) {
     options = options || {};
-    postJSON({
+    var conf = {
       action: action,
       data: data,
       contentType: options.contentType||"application/json;charset=utf-8",
@@ -6103,7 +6308,11 @@ define('app/model/RequestHelper',['require','exports','module'],function (requir
         }
         callback && callback(data.success);
       }
-    });
+    };
+    for(var name in options) conf[name]=options[name];
+    conf.action = action;
+    conf.data = data;
+    postJSON(conf);
   }
 
   return {
@@ -6201,6 +6410,7 @@ define('widget/Msgbox',['require','exports','module'],function (require, exports
       isLoading,
       emptyFn = function () {},
       onBD = emptyFn,
+      themeCls = option.themeCls || ($.os.android?'android':''),
       box = $('.msgbox');
     bEl = {
       box: box,
@@ -6210,7 +6420,6 @@ define('widget/Msgbox',['require','exports','module'],function (require, exports
       menu: box.find('.box-ct.menu'),
       loading: box.find('.box-ct.loading'),
       signin: box.find('.box-ct.signin')
-
     }
     bEl.dialog.hide();
     bEl.menu.hide();
@@ -6406,10 +6615,11 @@ define('widget/Msgbox',['require','exports','module'],function (require, exports
       _this.hide();
       callbackHandler(callback, data);
     }
+
     this.show = function (el) {
       el = el || bEl.box;
       //setTimeout(function () {
-      //bEl.box.css({height: document.body.scrollHeight + 'px'});
+        //bEl.box.css({height: document.body.scrollHeight + 'px'});
       //}, 500);
       if (el == bEl.box) {
         el.addClass('show');
@@ -6450,6 +6660,10 @@ define('widget/Msgbox',['require','exports','module'],function (require, exports
         callback = null;
       }
     }
+    this.setTheme = function(cls){
+      bEl.bd.removeClass([cls,'android'].join(' ')).addClass(cls);
+    }
+    this.setTheme(themeCls);
 
     //MONOSTATE
     Msgbox.prototype.instance = this;
@@ -6604,6 +6818,14 @@ define('app/view/View',['require','exports','module','app/resources/Actions','wi
       document.addEventListener('touchend', function (e) {
         VIEW.GlobalTouch.touched = false;
       },false);
+      //data-prevent-move="start" prevent document to move ontouchstart and cancel ontouchend,
+      //data-prevent-move="all" will always prevent the whole document to move
+      els.body.on('touchstart','* [data-prevent-move]',function(){
+        VIEW._BasicView.GlobalTouch.preventMove = true;
+      });
+      els.body.on('touchend','* [data-prevent-move="start"]',function(){
+        VIEW._BasicView.GlobalTouch.preventMove = false;
+      });
       if(VIEW.tapEvent=='tap'){
         els.body.on('click','a',function(e){
           e.preventDefault();
@@ -6645,8 +6867,11 @@ define('app/view/View',['require','exports','module','app/resources/Actions','wi
 
       var view = this.getView(viewCls);
       !view.hasClass('show') && view.addClass('show');
-      //auto scroll to history position
-      (autoRevert==undefined || autoRevert) && setTimeout(Core.Router.scrollToHistoryPosition,100);
+      //auto scroll to history position,and restore title
+      if(autoRevert==undefined || autoRevert){
+        setTimeout(Core.Router.scrollToHistoryPosition,100);
+        Core.Event.trigger('appModifyTitle');
+      }
       return this;
     }
     this.hide = function(notCls){
@@ -6765,6 +6990,8 @@ define('app/Controller/Controller',['require','exports','module','app/resources/
     Core.Event.on('webLogin', webLogin);
     //去App登录
     Core.Event.on('appLogin', appLogin);
+    //从App获取用户信息
+    Core.Event.on('appUserinfo', onUserinfo);
     //去反馈
     Core.Event.on('feedback', onFeedback);
     //复制文本
@@ -6781,8 +7008,6 @@ define('app/Controller/Controller',['require','exports','module','app/resources/
     Core.Event.on('appOnUnload', appOnUnload);
     //关闭webview
     Core.Event.on('appCloseWebView', appCloseWebView);
-    //打开 Selfie Test
-    Core.Event.on('appSelfieTest', appSelfieTest);
     //Update Profile
     Core.Event.on('appUpdateProfile', appUpdateProfile);
     //tab 切换
@@ -7018,9 +7243,6 @@ define('app/Controller/Controller',['require','exports','module','app/resources/
         Core.NativeBridge.closeweb();
       }
     }
-    function appSelfieTest(callback){
-      appAPI('selfieTest',null,callback)
-    }
 
     /**
      * @param subProtocol String creationLike,creationDelete,productLike,follow
@@ -7028,6 +7250,12 @@ define('app/Controller/Controller',['require','exports','module','app/resources/
     function appUpdateProfile(subProtocol){
       appAPI('updateProfile',null,null,subProtocol);
     }
+
+    /**
+     * dejafashion://name/subProtocol
+     * window.__dejafashion_data_name = data;
+     * window.__dejafashion_after_name = callback;
+     */
     function appAPI(name, data, callback, subProtocol,redirect){
       if (isApp) {
         Core.NativeBridge.trigger.apply(null,arguments);
@@ -7090,35 +7318,87 @@ define('app/model/UserModel',['require','exports','module','app/model/RequestHel
   var Actions = require('app/resources/Actions');
   var Basic = require('app/model/Model');
 
-  var USER,
-    Mdl = Core.Class.Model,
+  var Mdl = Core.Class.Model,
     lcStorage = Core.localStorage;
 
   function User() {
 
   }
 
-  User.prototype.user = new Mdl({
-    request: function (data,callback) { //callback method basically is ajax tech.
-      RequestHelper.request(Actions.user,data,callback,this);
+  //profile
+  User.prototype.profile = new Mdl({
+    isExist: function (id, name) {
+      return this.data && this.data[name] && ((this.data[name].indexOf(id) != -1) || (this.data[name].indexOf(id + '') != -1));
+    },
+    addId: function (id, name) {
+      if (this.data && this.data[name]) {
+        this.removeId(id, name);
+        this.data[name].push(id);
+      }
+    },
+    removeId: function (id, name) {
+      if (this.data && this.data[name] && ((this.data[name].indexOf(id) != -1) || (this.data[name].indexOf(id + '') != -1))) {
+        this.data[name].splice(this.data[name].indexOf(id), 1);
+        this.data[name].splice(this.data[name].indexOf(id + ''), 1);
+      }
+    },
+    isCreationLiked: function (id) {
+      return this.isExist(id, 'creation_likes');
+    },
+    isProductLiked: function (id) {
+      return this.isExist(id, 'product_likes');
+    },
+    isFollowed: function (id) {
+      return this.isExist(id, 'followers');
+    },
+    addCreationLiked: function (id) {
+      this.addId(id, 'creation_likes');
+    },
+    addProductLiked: function (id) {
+      this.addId(id, 'product_likes');
+    },
+    addFollowed: function (id) {
+      this.addId(id, 'followers');
+    },
+    removeCreationLiked: function (id) {
+      this.removeId(id, 'creation_likes');
+    },
+    removeProductLiked: function (id) {
+      this.removeId(id, 'product_likes');
+    },
+    removeFollowed: function (id) {
+      this.removeId(id, 'followers');
+    },
+    isMe: function (id) {
+      return this.data && this.data.user_info && this.data.user_info.id == id;
+    },
+    request: function (data, callback) {
+      RequestHelper.request(Actions.profile,data,callback,this);
     }
   });
 
-  User.prototype.userList = new Mdl({
-    request: function (data) {
-      RequestHelper.JSONP({
-        action: Actions.user+'?id='+data.id+'&callback=afterRequestUserList'
-      });
+  //follow
+  User.prototype.follow = new Mdl({
+    post: function (data, callback) {
+      RequestHelper.post(Actions.follow,data,callback,this);
+    }
+  });
+
+  User.prototype.userStyle = new Mdl({
+    request: function (data, callback) {
+      RequestHelper.request(Actions.userStyle,data,callback,this);
     }
   });
 
 
-  window.afterRequestUserList = function(data){
-    USER.userList.set(data);
-  }
-  USER = new User;
+  User.prototype.userInfo = new Mdl({
+    request: function (data, callback) {
+      RequestHelper.request(Actions.userInfo,data,callback,this);
+    }
+  });
 
-  return USER;
+
+  return new User;
 });
 
 define('app/view/HomeView',['require','exports','module','app/view/View','app/model/Model','app/model/UserModel'],function (require, exports, module) {
@@ -7283,15 +7563,252 @@ define('app/Controller/HomeController',['require','exports','module','../resourc
   return new HomeController;
 });
 
-define('app/view/UserView',['require','exports','module','app/view/View','app/model/Model','app/model/UserModel'],function (require, exports, module) {
+define('app/model/ProductModel',['require','exports','module','app/model/RequestHelper','app/resources/Actions','app/model/Model','app/model/UserModel'],function (require, exports, module) {
+  var RequestHelper = require('app/model/RequestHelper');
+  var Actions = require('app/resources/Actions');
+  var Basic = require('app/model/Model');
+  var User = require('app/model/UserModel');
+
+  var Mdl = Core.Class.Model,
+    lcStorage = Core.localStorage,
+    MODEL;
+
+  function Product() {
+
+  }
+  Product.prototype.formatHelper = {
+    normal: function(data){
+      if(data){
+        data.price = data.price || 0;
+        data.discount_price = data.discount_price || 0;
+        data.deja_price = data.deja_price || 0;
+        data.discount_percent = data.discount_percent || 0;
+        data._price = Core.Num.formatMoney(data.price / 100);
+        data._deja_price = Core.Num.formatMoney(data.deja_price / 100);
+        data._discount_price = Core.Num.formatMoney(data.discount_price / 100);
+        data.description = data.description || '';
+
+        data.liked = User.profile.isProductLiked(data.id);
+      }
+      return data;
+    },
+    order: function(data,brand){
+      if(data){
+        data.brand_name = brand || '';
+        data.deja_price = data.deja_price || 0;
+        data.total_price = data.unit_price*data.quantity;
+        data.total_discount_price = data.deja_price*data.quantity;
+        data._total_price = Core.Num.formatMoney(data.total_price / 100);
+        data._total_discount_price = Core.Num.formatMoney(data.total_discount_price / 100);
+        data.size = data.size || '';
+        data.color = data.color || '';
+      }
+      return data;
+    }
+  }
+
+  //editing cart product constructor
+  Product.prototype.editingCartProduct = function(data){
+    var product = JSON.parse(JSON.stringify(data)),
+      sku = {},
+      quantity = 1;
+    this.data = data;
+    this.getAttrs = function(){
+      return {
+        product_id: product.id,
+        order_sku: sku,
+        quantity: quantity
+      }
+    }
+    this.setSize = function(v){
+      sku.size = v;
+    }
+    this.getSize = function(){
+      return sku.size;
+    }
+    this.setColor = function(v){
+      sku.color = v;
+    }
+    this.getColor = function(){
+      return sku.color;
+    }
+    this.setQuantity = function(v){
+      quantity = v;
+    }
+    this.getQuantity = function(){
+      return quantity;
+    }
+  }
+  //editing order product constructor
+  Product.prototype.editingOrderProduct = function(data){
+    var product = JSON.parse(JSON.stringify(data)),
+      selected = product.status==1000,
+      updated = false;
+
+    this.getAttrs = function(){
+      return {
+        order_item_id: product.id,
+        quantity: product.quantity
+      }
+    }
+    this.setSize = function(v){
+      updated = true;
+      product.size = v;
+    }
+    this.getSize = function(){
+      return product.size;
+    }
+    this.setColor = function(v){
+      updated = true;
+      product.color = v;
+    }
+    this.getColor = function(){
+      return product.color;
+    }
+    this.setQuantity = function(v){
+      updated = true;
+      product.quantity = v;
+    }
+    this.getQuantity = function(){
+      return product.quantity;
+    }
+    this.sumPrice = function(){
+      return product.quantity*product.unit_price;
+    }
+    this.sumDiscountPrice = function(){
+      return product.quantity*(product.deja_price||0);
+    }
+    this.setSelected = function(v){
+      selected = v;
+    }
+    this.getSelected = function(){
+      return selected;
+    }
+    this.isUpdated = function(){
+      return updated;
+    }
+  }
+
+  //product info
+  Product.prototype.product = new Mdl({
+    request: function (data, callback) {
+      RequestHelper.request(Actions.product, data, callback, this);
+    }
+  });
+
+  function products(){
+    return new Mdl({
+      request: function (data, callback) {
+        var _this = this;
+        RequestHelper.request(Actions.product, data, function(success){
+          var listData = _this.get();
+          listData.data && listData.data.forEach(function(key,idx){
+            MODEL.product.store(key.id,{ret: 0,data: [key]});
+          });
+          callback && callback(success);
+        }, this);
+      }
+    });
+  }
+
+  // products similar
+  Product.prototype.productSimilars = products();
+
+  //product like
+  Product.prototype.likeProduct = new Mdl({
+    post: function (data, callback) {
+      RequestHelper.post(Actions.likeProduct,data,callback,this);
+    }
+  });
+
+  //scene detail products
+  Product.prototype.sceneProducts = new Mdl({
+    page: 0,
+    page_size: 20,
+    resetPage: function(){
+      this.page = 0;
+    },
+    request: function (data,callback) {
+      var _this = this;
+      RequestHelper.getJSON({
+        data: {page: _this.page, page_size: _this.page_size, scene_id: data.scene_id},
+        action: Actions.sceneProducts,
+        complete: function (data) {
+          if (data.success) {
+            _this.set(data.data);
+            _this.page++;
+          }
+          callback && callback(data.success);
+        }
+      });
+    }
+  });
+  //best deals
+  Product.prototype.specialProducts = new Mdl({
+    page: 0,
+    page_size: 20,
+    resetPage: function(){
+      this.page = 0;
+    },
+    request: function (data,callback) {
+      var _this = this;
+      RequestHelper.getJSON({
+        data: {page: _this.page, page_size: _this.page_size, price_max:2000,price_min:0,sort:1,status:0,tryon:0},
+        action: Actions.specialProducts,
+        complete: function (data) {
+          if (data.success) {
+            _this.set(data.data);
+            _this.page++;
+          }
+          callback && callback(data.success);
+        }
+      });
+    }
+  });
+
+  Product.prototype.mirrorProducts = products();
+
+  //likedItem products
+  Product.prototype.likedItemProducts = new Mdl({
+    page: 0,
+    page_size: 20,
+    resetPage: function(){
+      this.page = 0;
+    },
+    request: function (data,callback) {
+      var _this = this;
+      RequestHelper.getJSON({
+        data: {page: _this.page, page_size: _this.page_size, like_id: data.like_id},
+        action: Actions.likedItemProducts,
+        complete: function (data) {
+          if (data.success) {
+            _this.set(data.data);
+            _this.page++;
+          }
+          callback && callback(data.success);
+        }
+      });
+    }
+  });
+
+
+  MODEL = new Product;
+
+  return MODEL;
+});
+
+define('app/Controller/UserController',['require','exports','module','app/view/View','app/model/Model','app/model/UserModel','app/model/ProductModel'],function (require, exports, module) {
   var BasicView = require('app/view/View');
   var BasicModel = require('app/model/Model');
   var UserModel = require('app/model/UserModel');
+  var ProductModel = require('app/model/ProductModel');
 
-  function UserView() {
+
+  function UserView(){
     this.models = {
       Basic: BasicModel,
-      User: UserModel
+      User: UserModel,
+      Product: ProductModel
     }
     this.viewCls = 'view-user';
     this._BasicView = BasicView;
@@ -7302,15 +7819,31 @@ define('app/view/UserView',['require','exports','module','app/view/View','app/mo
       tap = VIEW._BasicView.tapEvent;
 
     //model listeners
-    VIEW.models.User.user.updated(render);
+    VIEW.models.User.userInfo.updated(render);
+    VIEW.models.User.userStyle.updated(renderUserStyle);
+
+
+    Core.Router.subscribe('/user/', function(req){
+      //console.log(req);
+    });
 
     function initEls() {
       if(els){return;}
-      var main = VIEW._BasicView.getView(VIEW.viewCls);;
+      var main = VIEW._BasicView.getView(VIEW.viewCls);
       els = {
+        //body: $('body'),
         main: main,
 
-        list: main.find('.list'),
+        tab: main.find('.tabs'),
+        tabs: main.find('.tabs>div'),
+        tabContents: main.find('.tab-content'),
+
+        myStyle: main.find('.user-styles .my-style .list'),
+        likedStyle: main.find('.user-styles .liked-style .list'),
+        likedItem: main.find('.user-styles .liked-item'),
+
+        userProfile: main.find('.profile'),
+
         back: main.find('.back')
       }
       bindEvent();
@@ -7332,13 +7865,21 @@ define('app/view/UserView',['require','exports','module','app/view/View','app/mo
       return Tpl;
     }
     function bindEvent() {
+      els.tab.on(tap,'div',function(){
+        Core.Event.trigger('switchTab',this,els.tabs,els.tabContents);
+      });
       els.back.on(tap, Core.Router.back);
+
+      els.userProfile.on(tap, '.user .avatar,.user .meta .name',function(){
+        Core.Event.trigger('appAPI','profile',null,null,this.getAttribute('data-id'));
+      });
+      els.userProfile.on(tap, '.user .follow i',renderFollow);
+
     }//end bindEvent
 
     this.show = function () {
       initResources();
 
-      Core.Event.trigger('trigerAnimate',els.main);
       VIEW._BasicView.show(VIEW.viewCls);
     }
     this.hide = function () {
@@ -7346,102 +7887,135 @@ define('app/view/UserView',['require','exports','module','app/view/View','app/mo
         return;
       }
     }
+
+
     function render(data) {
       initResources();
+      data = data || VIEW.models.User.userInfo.get();
 
-      data = data || VIEW.models.User.user.get();
+      if(!data || data.ret != 0 || !data.data){
+        return;
+      }
+      var user = data.data[0],
+        userStyle = VIEW.models.User.userStyle.get();
 
-      if (!data || !data.length) {
+      user.followed = VIEW.models.User.profile.isFollowed(user.id);
+
+      user.creations_count = 0;
+      if(userStyle && userStyle.ret == 0 && userStyle.data && userStyle.data.creations){
+        user.creations_count = userStyle.data.creations.length;
+      }
+      els.userProfile.html(Tpl.userProfile(user));
+
+    }//end render
+    function renderUserStyle(data){
+      data = data || VIEW.models.User.userStyle.get();
+
+      if(!data || data.ret != 0 || !data.data){
         return;
       }
 
+      var mystyle = data.data.creations;
+      var likedstyle = data.data.liked_creations;
+      //data.id = viewLikedItemsQuery.id;
+
+      renderMyStyles(mystyle);
+      renderLikedStyles(likedstyle);
+      renderLikedItems();
+
+    }
+    function renderMyStyles(data) {
+      if(!data || data.length<1){
+        els.myStyle.parent().addClass('hide');
+        return;
+      }
       var list = [];
-      data.forEach(function (key, index) {
-        list.push(Tpl.listItem(key));
+      data.forEach(function(key,idx){
+        list.push( Tpl.myStyle(key) );
       });
-      els.list.html(list.join(''));
-      list = null;
-    }//end render
 
+      els.myStyle.parent().removeClass('hide');
+      els.myStyle.one('virtualdomrendered',function(){
+        VIEW._BasicView.lazyLoadImg($(this));
+      }).html(list.join(''),true);
 
+    }
+    function renderLikedStyles(data) {
+      if(!data || data.length<1){
+        els.likedStyle.parent().addClass('hide');
+        return;
+      }
+      var list = [];
+      data.forEach(function(key,idx){
+        list.push( Tpl.likedStyle(key) );
+      });
+
+      els.likedStyle.parent().removeClass('hide');
+      els.likedStyle.one('virtualdomrendered',function(){
+        VIEW._BasicView.lazyLoadImg($(this));
+      }).html(list.join(''),true);
+    }
+
+    function renderLikedItems(data) {
+      data = data || VIEW.models.User.userStyle.get();
+
+      if(!data || data.ret != 0 || !data.data){
+        return;
+      }
+      var llist = [],rlist = [],dd = data.data.liked_items.slice(0);
+      dd.forEach(function(key,idx){
+        var _list = idx%2?rlist:llist;
+        key = VIEW.models.Product.formatHelper.normal(key);
+
+        _list.push( Tpl.likedItem(key) );
+      });
+      var sec = els.likedItem.find('.list');
+      if(sec[0]){
+        var fn = VIEW.models.User.userStyle.page?'append': 'html';
+        sec.find('.loading').remove();
+        sec.find('.list-row.left')[fn](llist.join(''));
+        sec.find('.list-row.right')[fn](rlist.join(''));
+        VIEW._BasicView.lazyLoadImg(sec);
+      }
+    }
+
+    function renderFollow(){
+      if (!VIEW.models.Basic.isLogined()) {
+        Core.Event.trigger('login', window.location.hash);
+        return;
+      }
+      var el = $(this),
+        isInvoker = el.attr('data-invoker'),
+        isFollow = el.hasClass('unfollow');
+
+      if (isFollow){
+        if(isInvoker == 0){
+          el.siblings('.followed').removeClass('hide');
+        }else{
+          el.siblings('.each').removeClass('hide');
+        }
+        el.addClass('hide');
+        Core.Event.trigger('UserController.beforeFollow',el.attr('data-id'),isFollow);
+      }else{
+        VIEW._BasicView.msgbox.showMenu({
+          msg:'',
+          noCls: 'highlight',
+          options: [
+            {
+              text:'Unfollow',
+              callback: function () {
+                el.siblings('.followed,.each').addClass('hide');
+                el.siblings('.unfollow').removeClass('hide');
+                el.addClass('hide');
+                Core.Event.trigger('UserController.beforeFollow',el.attr('data-id'),isFollow);
+              }
+            }
+          ]
+        });
+      }
+    }
   }//end View
   return new UserView();
-});
-
-define('app/Controller/UserController',['require','exports','module','../resources/Actions','app/model/Model','app/model/UserModel','app/view/View','app/view/UserView'],function (require, exports, module) {
-  var Actions = require('../resources/Actions');
-  var BasicModel = require('app/model/Model');
-  var UserModel = require('app/model/UserModel');
-  var BasicView = require('app/view/View');
-  var UserView = require('app/view/UserView');
-
-  function UserController() {
-    this.models = {
-      Basic: BasicModel,
-      User: UserModel
-    }
-    this.views = {
-      Basic: BasicView,
-      User: UserView
-    };
-
-    var CTRL = this,
-      viewNames,
-      curViewId = '',
-      viewUserQuery = {};
-
-    viewNames = {
-      'user': 'User'
-    }
-    Core.Router.subscribe('/user/', onViewUser, unViewUser);
-
-    //统计视图
-    Core.Event.on('analyticsCurView', analyticsCurView);
-    //forwardUser
-    Core.Event.on('forwardUser', forwardUser);
-
-
-    function unViewUser() {
-      CTRL.views.User.hide();
-    }
-
-    function onViewUser(req) {
-      curViewId = 'user';
-      viewUserQuery = req.query;
-      CTRL.views.User.show();
-
-      CTRL.views.Basic.msgbox.hideLoading();
-      CTRL.models.User.user.request({id: viewUserQuery.userid},afterRequestUser);
-
-      //追加统计
-      analyticsCurView();
-    }
-
-    function afterRequestUser(success) {
-      CTRL.views.Basic.msgbox.hideLoading();
-      if (success) {
-        CTRL.models.User.user.timer.update();
-      } else {
-        CTRL.views.Basic.msgbox.showFailed();
-      }
-    }
-
-    function forwardUser(arg) {
-      Core.Router.forward('/user/' + (arg || ''));
-    }
-
-    function analyticsCurView(params, title) {
-      if (!Core.Router.currentMatch(['/user/'])) {
-        return;
-      }
-      params = params ? ('&' + params) : '';
-      title = title || viewNames[curViewId] || document.title;
-
-      Core.Event.trigger('analytics', 'viewid=' + curViewId + params, title);
-    }
-  }
-
-  return new UserController;
 });
 
 define('app/model/MovieModel',['require','exports','module','app/model/RequestHelper','app/resources/Actions','app/model/Model'],function (require, exports, module) {

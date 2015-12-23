@@ -11,6 +11,7 @@ define(function (require, exports, module) {
       isLoading,
       emptyFn = function () {},
       onBD = emptyFn,
+      themeCls = option.themeCls || ($.os.android?'android':''),
       box = $('.msgbox');
     bEl = {
       box: box,
@@ -20,7 +21,6 @@ define(function (require, exports, module) {
       menu: box.find('.box-ct.menu'),
       loading: box.find('.box-ct.loading'),
       signin: box.find('.box-ct.signin')
-
     }
     bEl.dialog.hide();
     bEl.menu.hide();
@@ -216,10 +216,11 @@ define(function (require, exports, module) {
       _this.hide();
       callbackHandler(callback, data);
     }
+
     this.show = function (el) {
       el = el || bEl.box;
       //setTimeout(function () {
-      //bEl.box.css({height: document.body.scrollHeight + 'px'});
+        //bEl.box.css({height: document.body.scrollHeight + 'px'});
       //}, 500);
       if (el == bEl.box) {
         el.addClass('show');
@@ -260,6 +261,10 @@ define(function (require, exports, module) {
         callback = null;
       }
     }
+    this.setTheme = function(cls){
+      bEl.bd.removeClass([cls,'android'].join(' ')).addClass(cls);
+    }
+    this.setTheme(themeCls);
 
     //MONOSTATE
     Msgbox.prototype.instance = this;

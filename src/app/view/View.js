@@ -72,6 +72,14 @@ define(function(require, exports, module) {
       document.addEventListener('touchend', function (e) {
         VIEW.GlobalTouch.touched = false;
       },false);
+      //data-prevent-move="start" prevent document to move ontouchstart and cancel ontouchend,
+      //data-prevent-move="all" will always prevent the whole document to move
+      els.body.on('touchstart','* [data-prevent-move]',function(){
+        VIEW._BasicView.GlobalTouch.preventMove = true;
+      });
+      els.body.on('touchend','* [data-prevent-move="start"]',function(){
+        VIEW._BasicView.GlobalTouch.preventMove = false;
+      });
       if(VIEW.tapEvent=='tap'){
         els.body.on('click','a',function(e){
           e.preventDefault();
@@ -113,8 +121,11 @@ define(function(require, exports, module) {
 
       var view = this.getView(viewCls);
       !view.hasClass('show') && view.addClass('show');
-      //auto scroll to history position
-      (autoRevert==undefined || autoRevert) && setTimeout(Core.Router.scrollToHistoryPosition,100);
+      //auto scroll to history position,and restore title
+      if(autoRevert==undefined || autoRevert){
+        setTimeout(Core.Router.scrollToHistoryPosition,100);
+        Core.Event.trigger('appModifyTitle');
+      }
       return this;
     }
     this.hide = function(notCls){

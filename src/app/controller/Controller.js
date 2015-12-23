@@ -44,6 +44,8 @@ define(function (require, exports, module) {
     Core.Event.on('webLogin', webLogin);
     //去App登录
     Core.Event.on('appLogin', appLogin);
+    //从App获取用户信息
+    Core.Event.on('appUserinfo', onUserinfo);
     //去反馈
     Core.Event.on('feedback', onFeedback);
     //复制文本
@@ -60,8 +62,6 @@ define(function (require, exports, module) {
     Core.Event.on('appOnUnload', appOnUnload);
     //关闭webview
     Core.Event.on('appCloseWebView', appCloseWebView);
-    //打开 Selfie Test
-    Core.Event.on('appSelfieTest', appSelfieTest);
     //Update Profile
     Core.Event.on('appUpdateProfile', appUpdateProfile);
     //tab 切换
@@ -297,9 +297,6 @@ define(function (require, exports, module) {
         Core.NativeBridge.closeweb();
       }
     }
-    function appSelfieTest(callback){
-      appAPI('selfieTest',null,callback)
-    }
 
     /**
      * @param subProtocol String creationLike,creationDelete,productLike,follow
@@ -307,6 +304,12 @@ define(function (require, exports, module) {
     function appUpdateProfile(subProtocol){
       appAPI('updateProfile',null,null,subProtocol);
     }
+
+    /**
+     * dejafashion://name/subProtocol
+     * window.__dejafashion_data_name = data;
+     * window.__dejafashion_after_name = callback;
+     */
     function appAPI(name, data, callback, subProtocol,redirect){
       if (isApp) {
         Core.NativeBridge.trigger.apply(null,arguments);

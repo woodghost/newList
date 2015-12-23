@@ -1,5 +1,22 @@
-[
-  {"name": "Peter"},
-  {"name": "Joy"},
-  {"name": "Brian"}
-]
+{
+  "msg": "ok",
+  "ret": 0,
+  "data": [
+    {
+      "id": 10401,
+      "name": "Reci  Wang",
+      "openid": "1572126666382461",
+      "platform": "fb",
+      "gender": "female",
+      "score": 2410,
+      "email": "moew0807@gmail.com",
+      "type": 1,
+      "head_pic": "http://graph.facebook.com/1572126666382461/picture?type=square&width=200&height=200",
+      "follower_count": 58,
+      "following_count": 11,
+      "relation_to_invoker": 0,
+      "bfc_id": "5670b01d-af26-44e3-bf55-227e681c77cc",
+      "cart_id": ""
+    }
+  ]
+}

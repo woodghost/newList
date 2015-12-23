@@ -10,3 +10,86 @@
     <section class="btn bt-a back">Go back!</section>
   </section>
 </section>
+<section class="view view-user">
+  <section class="profile">
+    <script type="text/html" data-template="userProfile">
+      <section class="user">
+        <div class="avatar" data-id="<%=id%>">
+          <img micro-src="<%=head_pic%>">
+          <div class="tag <%=type==0?'hide':''%>">
+            <i class="icon icon-icon_ambassadors_44X44 <%=type==1?'':'hide'%>"></i>
+            <i class="icon icon-icon_influencer_44X44 <%=type==2?'':'hide'%>"></i>
+          </div>
+        </div>
+        <div class="meta">
+          <div class="name ellipsis" data-id="<%=id%>"><%=name%></div>
+          <div class="style"><span><%=creations_count%></span> styles</div>
+          <div class="follower"><span><%=follower_count%></span> followers</div>
+          <div class="following"><span><%=following_count%></span> following</div>
+          <div class="follow">
+            <i class="icon icon-btn_follow_nor_2x unfollow <%=followed?'hide':''%>" data-id="<%=id%>"
+               data-invoker="<%=relation_to_invoker%>"></i>
+            <i class="icon icon-btn_followed_nor_2x followed <%=followed && relation_to_invoker==0?'':'hide'%>"
+               data-id="<%=id%>"></i>
+            <i class="icon icon-btn_follow_each_nor_2x each <%=followed && relation_to_invoker==1?'':'hide'%>"
+               data-id="<%=id%>"></i>
+          </div>
+        </div>
+      </section>
+    </script>
+  </section>
+  <section class="user-styles">
+    <header>
+      <section class="tabs-title-three tabs">
+        <div class="first on">My Styles</div>
+        <div class="second">Liked Styles</div>
+        <div class="last">Liked Items</div>
+      </section>
+    </header>
+    <section class="tab-content my-style tabs-content-default show">
+      <section class="list clearfix">
+        <script type="text/html" data-template="myStyle">
+          <article class="item" data-id="<%=id%>" data-fake-link="#/creation/id=<%=id%>" data-analytics="act=enter_creation_detail&cid=<%=id%>">
+            <div class="img"><img class="lazy" data-src="<%=data%>/320.jpg"></div>
+          </article>
+        </script>
+      </section>
+    </section>
+    <section class="tab-content liked-style tabs-content-default">
+      <section class="list clearfix">
+        <script type="text/html" data-template="likedStyle">
+          <article class="item" data-id="<%=id%>" data-fake-link="#/creation/id=<%=id%>" data-analytics="act=enter_creation_detail&cid=<%=id%>">
+            <div class="img"><img class="lazy" data-src="<%=data%>/320.jpg"></div>
+          </article>
+        </script>
+      </section>
+    </section>
+    <section class="tab-content liked-item tabs-content-default">
+      <section class="product-item-waterfall list clearfix" data-pid="0">
+        <section class="list-row left clearfix">
+          <script type="text/html" data-template="likedItem">
+            <article class="item" data-id="<%=id%>">
+              <div class="img"><img class="lazy" data-src="<%=thumb_new%>"></div>
+              <div class="bbar">
+                <div class="brand ellipsis"><%=brand_name%></div>
+                <div class="meta">
+                  @@include("include/product-price-default.html")
+                </div>
+              </div>
+              <div class="tag <%=!discount_percent?'hide':''%>">
+                <div class="tag-bd">
+                  <div>SALE</div>
+                  <div class="persent"><%=discount_percent%>%</div>
+                </div>
+              </div>
+            </article>
+          </script>
+        </section>
+        <section class="list-row right clearfix"></section>
+        <!-- list-end-default -->
+        @@include("include/list-end-simple.html")
+        <!-- end list-end-default -->
+      </section>
+    </section>
+  </section>
+</section>

@@ -1,14 +1,14 @@
 {
   "name": "newList",
   "version": "0.0.1",
-  "description": "Hello newList",
+  "description": "WG's Wonderland",
   "project": {
     "invalidNames": "products|account|config|favorite|creation|feed|feedback|dilog|invite|vote|event|share|monitor|follow",
-    "title": "Title - newList",
+    "title": "Wood Ghost",
     "viewport": 750,
     "manifest": false,
-    "sourceImg": "../../../../../Mozat/Deja/newList/UI/build/img/**/*.{png,jpg}",
-    "sourceSprites": "../../../../../Mozat/Deja/newList/UI/build/assets/*.png",
+    "sourceImg": "statics/UI/build/img/**/*.{png,jpg}",
+    "sourceSprites": "statics/UI/build/assets/*.png",
     "watchJshint": true,
     "watchScsslint": false,
     "browserSync": {

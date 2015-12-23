@@ -4,7 +4,7 @@
   <!-- htmlhead -->
   <meta charset="UTF-8">
 <meta content="target-densitydpi=device-dpi,width=750" name="viewport">
-<title>Title - newList</title>
+<title>Wood Ghost</title>
 <meta name="author" content="Mozat"/>
 <meta name="Copyright" content="Mozat Pte Ltd"/>
 <meta name="format-detection" content="email=no,address=no,telephone=no">
@@ -42,6 +42,94 @@
       </script>
     </section>
     <section class="btn bt-a back">Go back!</section>
+  </section>
+</section>
+<section class="view view-user">
+  <section class="profile">
+    <script type="text/html" data-template="userProfile">
+      <section class="user">
+        <div class="avatar" data-id="<%=id%>">
+          <img micro-src="<%=head_pic%>">
+          <div class="tag <%=type==0?'hide':''%>">
+            <i class="icon icon-icon_ambassadors_44X44 <%=type==1?'':'hide'%>"></i>
+            <i class="icon icon-icon_influencer_44X44 <%=type==2?'':'hide'%>"></i>
+          </div>
+        </div>
+        <div class="meta">
+          <div class="name ellipsis" data-id="<%=id%>"><%=name%></div>
+          <div class="style"><span><%=creations_count%></span> styles</div>
+          <div class="follower"><span><%=follower_count%></span> followers</div>
+          <div class="following"><span><%=following_count%></span> following</div>
+          <div class="follow">
+            <i class="icon icon-btn_follow_nor_2x unfollow <%=followed?'hide':''%>" data-id="<%=id%>"
+               data-invoker="<%=relation_to_invoker%>"></i>
+            <i class="icon icon-btn_followed_nor_2x followed <%=followed && relation_to_invoker==0?'':'hide'%>"
+               data-id="<%=id%>"></i>
+            <i class="icon icon-btn_follow_each_nor_2x each <%=followed && relation_to_invoker==1?'':'hide'%>"
+               data-id="<%=id%>"></i>
+          </div>
+        </div>
+      </section>
+    </script>
+  </section>
+  <section class="user-styles">
+    <header>
+      <section class="tabs-title-three tabs">
+        <div class="first on">My Styles</div>
+        <div class="second">Liked Styles</div>
+        <div class="last">Liked Items</div>
+      </section>
+    </header>
+    <section class="tab-content my-style tabs-content-default show">
+      <section class="list clearfix">
+        <script type="text/html" data-template="myStyle">
+          <article class="item" data-id="<%=id%>" data-fake-link="#/creation/id=<%=id%>" data-analytics="act=enter_creation_detail&cid=<%=id%>">
+            <div class="img"><img class="lazy" data-src="<%=data%>/320.jpg"></div>
+          </article>
+        </script>
+      </section>
+    </section>
+    <section class="tab-content liked-style tabs-content-default">
+      <section class="list clearfix">
+        <script type="text/html" data-template="likedStyle">
+          <article class="item" data-id="<%=id%>" data-fake-link="#/creation/id=<%=id%>" data-analytics="act=enter_creation_detail&cid=<%=id%>">
+            <div class="img"><img class="lazy" data-src="<%=data%>/320.jpg"></div>
+          </article>
+        </script>
+      </section>
+    </section>
+    <section class="tab-content liked-item tabs-content-default">
+      <section class="product-item-waterfall list clearfix" data-pid="0">
+        <section class="list-row left clearfix">
+          <script type="text/html" data-template="likedItem">
+            <article class="item" data-id="<%=id%>">
+              <div class="img"><img class="lazy" data-src="<%=thumb_new%>"></div>
+              <div class="bbar">
+                <div class="brand ellipsis"><%=brand_name%></div>
+                <div class="meta">
+                  <div class="price <%=deja_price>0?'underline':(price>discount_price?'highlight':'')%>"><span><%=currency_unit%><%=deja_price>0?_price:(price>discount_price?_discount_price:_price)%></span></div>
+<div class="price <%=deja_price>0?'highlight':'hide'%>">DEJA <%=currency_unit%><%=_deja_price%></div>
+
+                </div>
+              </div>
+              <div class="tag <%=!discount_percent?'hide':''%>">
+                <div class="tag-bd">
+                  <div>SALE</div>
+                  <div class="persent"><%=discount_percent%>%</div>
+                </div>
+              </div>
+            </article>
+          </script>
+        </section>
+        <section class="list-row right clearfix"></section>
+        <!-- list-end-default -->
+        <footer class="list-end list-end-default">
+  <div class="end show">All content displayed</div>
+</footer>
+
+        <!-- end list-end-default -->
+      </section>
+    </section>
   </section>
 </section>
 
@@ -94,7 +182,7 @@
           </div>
         </div>
       </div>
-      <div class="box-ct menu">
+      <div class="box-ct menu absolute">
         <div class="box-bd">
           <div class="options"></div>
           <div class="opt no">Cancel</div>
@@ -113,17 +201,29 @@
           </div>
         </div>
       </div>
+      <!-- msgbox deja -->
       <div class="box-ct signin">
-        <div class="box-bd">
-          <div>
-            <div class="msg fix-break-word">Please sign in</div>
-            <div class="plf">
-              <div class="b" data-plf="fb"><i class="icon icon-btn_fb_login"></i></div>
-            </div>
-          </div>
-          <div class="no"><i class="icon icon-ic_s_close_nor_2x"></i></div>
-        </div>
+  <div class="box-bd">
+    <div>
+      <div class="msg fix-break-word">Please sign in</div>
+      <div class="plf">
+        <div class="b" data-plf="fb"><i class="icon icon-btn_fb_login"></i></div>
       </div>
+    </div>
+    <div class="no"><i class="icon icon-ic_s_close_nor_2x"></i></div>
+  </div>
+</div>
+<!--
+<div class="box-ct winfaceanalysis">
+  <div class="box-bd">
+    <img src="resources/images/gift.jpg">
+    <div class="no"></div>
+    <div class="share" data-eventname="share" data-eventparams="0,facebook"></div>
+  </div>
+</div>
+-->
+
+      <!-- end msgbox deja -->
     </div>
   </div>
 </section>
